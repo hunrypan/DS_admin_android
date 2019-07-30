@@ -288,4 +288,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    public void wifiopen(View view) {
+        if (character_wifistate != null)
+        {
+            character_wifistate.setValue("open");
+            bluetoothGatt.writeCharacteristic(character_wifistate);
+        }
+    }
 }
