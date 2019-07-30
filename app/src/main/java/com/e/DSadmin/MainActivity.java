@@ -31,6 +31,8 @@ import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -85,30 +87,39 @@ public class MainActivity extends AppCompatActivity {
     public EditText thessid;
     public EditText thepw;
 
+    final static ExecutorService tpe = Executors.newSingleThreadExecutor();
+
     private BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
 
-            //String.format("value = %d", intVar)
+                    //String.format("value = %d", intVar)
+            Log.d("aha", "onCharacteristicRead:" + characteristic.getStringValue(0).toString());
+
 
             if (characteristic.getUuid().toString().equals(wifistate_UUID)) {
-                Log.d("aha", "onCharacteristicRead:" + characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_SINT32,0).toString());
                 final String wifistate = characteristic.getStringValue(0);
+                bluetoothGatt.readCharacteristic(character_ssid);
                 runOnUiThread(new Runnable() {
                     public void run() {
-                        tv.setText("WIFI STATE " + wifistate);
+                        tv.setText("WIFI STATE: " + wifistate);
                     }
                 });
-            } else if (characteristic.getUuid().toString().equals(ssid_UUID)) {
+            }
+
+            if (characteristic.getUuid().toString().equals(ssid_UUID)) {
                 final String ssidstr = characteristic.getStringValue(0);
+                bluetoothGatt.readCharacteristic(character_pw);
                 runOnUiThread(new Runnable() {
                     public void run() {
                         thessid.setText(ssidstr);
                     }
                 });
-            }else if (characteristic.getUuid().toString().equals(pw_UUID)) {
+            }
+
+            if (characteristic.getUuid().toString().equals(pw_UUID)) {
                 final String pwstr = characteristic.getStringValue(0);
                 runOnUiThread(new Runnable() {
                     public void run() {
@@ -151,34 +162,40 @@ public class MainActivity extends AppCompatActivity {
             Log.d("aha", "onServicesDiscovered: " + sv.getUuid().toString());
             sv.getCharacteristics();
 
+
+
+
             character_wifistate = sv.getCharacteristic(UUID.fromString(wifistate_UUID));
+            Log.d("aha", "wifistate character is " + character_wifistate.toString() );
 
             character_ssid = sv.getCharacteristic(UUID.fromString(ssid_UUID));
+            Log.d("aha", "ssid character is " + character_ssid.toString() );
+
+
             character_pw = sv.getCharacteristic(UUID.fromString(pw_UUID));
+            Log.d("aha", "pw character is " + character_pw.toString() );
 
             bluetoothGatt.readCharacteristic(character_wifistate);
+            //bluetoothGatt.readCharacteristic(character_ssid);
+            //bluetoothGatt.readCharacteristic(character_pw);
 
-            bluetoothGatt.readCharacteristic(character_ssid);
+            bluetoothGatt.setCharacteristicNotification(character_wifistate, true);
 
-            bluetoothGatt.readCharacteristic(character_pw);
-
-            /*
-            bluetoothGatt.setCharacteristicNotification(character_windspeed, true);
-
-            // bluetoothGatt.readCharacteristic(character_windspeed);
-
-            List<BluetoothGattDescriptor> des = character_windspeed.getDescriptors();
-            Log.d("aha", "how many des : " + des.size());
-
+            List<BluetoothGattDescriptor> des = character_wifistate.getDescriptors();
 
             BluetoothGattDescriptor descriptor = des.get(0);
 
-
-            Log.d("aha", "descriptor is: " + descriptor.toString());
-
             bluetoothGatt.readDescriptor(descriptor);
-            */
-            //character_looptime = sv.getCharacteristic(UUID.fromString(CHARACTERISTIC_UUID2));
+
+        /*
+            tpe.submit(new Runnable() {
+                @Override
+                public void run() {
+                    bluetoothGatt.readCharacteristic(character_wifistate);
+                }
+            });
+        */
+
         }
 
 
@@ -186,13 +203,13 @@ public class MainActivity extends AppCompatActivity {
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
 
-            Log.d("aha","windspeed change");
+            Log.d("aha","wifistate change");
             if (characteristic.getUuid().toString().equals(wifistate_UUID)) {
-                final String thespeed = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0).toString();
+                final String thespeed = characteristic.getStringValue(0);
                 Log.d("aha", "windspeed change to: " + thespeed);
                 runOnUiThread(new Runnable() {
                     public void run() {
-                        tv.setText("windspeed: " + thespeed);
+                        tv.setText("WIFI STATE: " + thespeed);
                     }
                 });
             }
