@@ -29,10 +29,17 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 import com.amap.api.maps.AMap;
+import com.amap.api.maps.CameraUpdate;
+import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.LocationSource;
 import com.amap.api.maps.MapView;
 import com.amap.api.maps.UiSettings;
+import com.amap.api.maps.model.CameraPosition;
 import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.MarkerOptions;
@@ -61,49 +68,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        gpstime = 0;
+
         mapView = (MapView) findViewById(R.id.map);
         mapView.onCreate(null);
 
+        startgps();
 
-        //MyLocationStyle myLocationStyle;
-        //myLocationStyle = new MyLocationStyle();//初始化定位蓝点样式类myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);//连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
-        //myLocationStyle.interval(2000); //设置连续定位模式下的定位间隔，只在连续定位模式下生效，单次定位模式下不会生效。单位为毫秒。
-        //mapView.getMap().setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
-        mapView.getMap().setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，
-        mapView.getMap().getUiSettings().setMyLocationButtonEnabled(true);
-
-
-
-        LatLng latLng = new LatLng(39.906901, 116.397972);
-        final Marker marker = mapView.getMap().addMarker(new MarkerOptions().position(latLng).title("aha").snippet("DefaultMarker"));
-        marker.setDraggable(true);
-
-        AMap.OnMarkerDragListener markerDragListener = new AMap.OnMarkerDragListener() {
-
-            @Override
-            public void onMarkerDragStart(Marker arg0) {
-                // TODO Auto-generated method stub
-
-            }
-
-            @Override
-            public void onMarkerDragEnd(Marker arg0) {
-                Log.d("aha", "onMarkerDragEnd: " + arg0.getPosition().toString());
-
-            }
-
-            @Override
-            public void onMarkerDrag(Marker arg0) {
-                // TODO Auto-generated method stub
-
-            }
-        };
-
-        mapView.getMap().setOnMarkerDragListener(markerDragListener);
-
-
-
-
+        //mapView.getMap().setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，
+        //mapView.getMap().getUiSettings().setMyLocationButtonEnabled(true);
 
 
         textToSpeech = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
@@ -203,6 +176,13 @@ public class MainActivity extends AppCompatActivity {
     public EditText thessid;
     public EditText thepw;
     private  String DS_id;
+    public AMapLocationClient mLocationClient = null;
+    public AMapLocationListener mLocationListener = null;
+    public AMapLocationClientOption mLocationOption = null;
+    public Double la;
+    public Double ln;
+    private  Marker marker;
+    private  int gpstime;
 
     final static ExecutorService tpe = Executors.newSingleThreadExecutor();
 
@@ -490,11 +470,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void sendinfo(View view) {
 
-        String la = "12.234";
-        String ln = "37.435";
-        String info = "info";
-        String sendstr = "{\"DS_id\":\"" + DS_id + "\",\"la\":\"" + la + "\",\"ln\":\"" + ln + "\",\"info\":\"" + info + "\"}";
+        EditText et = (EditText)findViewById(R.id.info);
+
+        String info = et.getText().toString();
+        String sendstr = "{\"DS_id\":\"" + DS_id + "\",\"la\":\"" + String.valueOf(la) + "\",\"ln\":\"" + String.valueOf(ln) + "\",\"info\":\"" + info + "\"}";
         Log.d("aha", "sendinfo: " + sendstr);
+
         /*
         try {
             mqttpub(sendstr);
@@ -509,6 +490,63 @@ public class MainActivity extends AppCompatActivity {
     public void  getmapinfo()
     {
         //mapView.getMap().getProjection().fromScreenLocation(android.graphics.Point paramPoint)
+    }
+
+
+    public  void startgps()
+    {
+        mLocationListener = new AMapLocationListener() {
+            @Override
+            public void onLocationChanged(AMapLocation aMapLocation) {
+                la = aMapLocation.getLatitude();
+                ln = aMapLocation.getLongitude();
+
+
+                    if (la > 0) {
+                            CameraUpdate mCameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(new LatLng(la, ln), 18, 0, 0));
+                            mapView.getMap().animateCamera(mCameraUpdate);
+
+                            LatLng latLng = new LatLng(la, ln);
+                            marker = mapView.getMap().addMarker(new MarkerOptions().position(latLng).title("Drink Station").snippet(""));
+                            marker.setDraggable(true);
+
+                            AMap.OnMarkerDragListener markerDragListener = new AMap.OnMarkerDragListener() {
+
+                                @Override
+                                public void onMarkerDragStart(Marker arg0) {
+                                    // TODO Auto-generated method stub
+
+                                }
+
+                                @Override
+                                public void onMarkerDragEnd(Marker arg0) {
+                                    Log.d("aha", "onMarkerDragEnd: " + arg0.getPosition().toString());
+
+                                }
+
+                                @Override
+                                public void onMarkerDrag(Marker arg0) {
+                                    // TODO Auto-generated method stub
+
+                                }
+                            };
+
+                            mapView.getMap().setOnMarkerDragListener(markerDragListener);
+                            mLocationClient.stopLocation();
+                        }
+            }
+        };
+        mLocationClient = new AMapLocationClient(getApplicationContext());
+
+        mLocationClient.setLocationListener(mLocationListener);
+        mLocationOption = new AMapLocationClientOption();
+        mLocationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
+        mLocationOption.setOnceLocationLatest(true);
+        mLocationOption.setNeedAddress(false);
+        mLocationOption.setHttpTimeOut(10000);
+        mLocationOption.setLocationCacheEnable(false);
+        mLocationClient.setLocationOption(mLocationOption);
+        mLocationClient.startLocation();
     }
 
 }
