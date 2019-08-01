@@ -33,18 +33,43 @@
         </LinearLayout>
 
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="82dp"
+        android:orientation="vertical">
         <EditText
             android:id="@+id/ssid"
             android:layout_width="match_parent"
             android:layout_height="40dp"
-            android:hint="WIFI SSID"
-            android:text="" />
+            android:hint="WIFI SSID" />
 
         <EditText
             android:id="@+id/pw"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:hint="WIFI password" />
+    </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="400dp"
+            android:orientation="vertical">
+
+            <com.amap.api.maps.MapView
+                android:id="@+id/map"
+                android:layout_width="match_parent"
+                android:layout_height="300dp"/>
+            <EditText
+                android:id="@+id/info"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:hint="info on map" />
+            <Button
+                android:onClick="sendinfo"
+                android:layout_width="200dp"
+                android:layout_height="40dp"
+                android:text="send map info" />
+    </LinearLayout>
 
     </LinearLayout>
 

@@ -20,16 +20,36 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.ParcelUuid;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.amap.api.maps.AMap;
+import com.amap.api.maps.LocationSource;
+import com.amap.api.maps.MapView;
+import com.amap.api.maps.UiSettings;
+import com.amap.api.maps.model.LatLng;
+import com.amap.api.maps.model.Marker;
+import com.amap.api.maps.model.MarkerOptions;
+import com.amap.api.maps.model.MyLocationStyle;
+
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,6 +61,88 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mapView = (MapView) findViewById(R.id.map);
+        mapView.onCreate(null);
+
+
+        //MyLocationStyle myLocationStyle;
+        //myLocationStyle = new MyLocationStyle();//初始化定位蓝点样式类myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);//连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
+        //myLocationStyle.interval(2000); //设置连续定位模式下的定位间隔，只在连续定位模式下生效，单次定位模式下不会生效。单位为毫秒。
+        //mapView.getMap().setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
+        mapView.getMap().setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，
+        mapView.getMap().getUiSettings().setMyLocationButtonEnabled(true);
+
+
+
+        LatLng latLng = new LatLng(39.906901, 116.397972);
+        final Marker marker = mapView.getMap().addMarker(new MarkerOptions().position(latLng).title("aha").snippet("DefaultMarker"));
+        marker.setDraggable(true);
+
+        AMap.OnMarkerDragListener markerDragListener = new AMap.OnMarkerDragListener() {
+
+            @Override
+            public void onMarkerDragStart(Marker arg0) {
+                // TODO Auto-generated method stub
+
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker arg0) {
+                Log.d("aha", "onMarkerDragEnd: " + arg0.getPosition().toString());
+
+            }
+
+            @Override
+            public void onMarkerDrag(Marker arg0) {
+                // TODO Auto-generated method stub
+
+            }
+        };
+
+        mapView.getMap().setOnMarkerDragListener(markerDragListener);
+
+
+
+
+
+
+        textToSpeech = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int i) {
+                if (i == TextToSpeech.SUCCESS)
+                {
+                    int result = textToSpeech.setLanguage(Locale.US);
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED)
+                    {
+                        Log.d("aha","lang not supported");
+                    }
+                }else {
+                    Log.d("aha","texttospeech init failed");
+                }
+            }
+        });
+
+        String clientId = MqttClient.generateClientId();
+        client = new MqttAndroidClient(getApplication(), "tcp://94.191.14.111:2000", clientId);
+
+        try {
+            client.connect().setActionCallback(new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+
+                }
+            });
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+
+
+
         tv = (TextView) findViewById(R.id.tv);
         thepw = (EditText) findViewById(R.id.pw);
         thessid = (EditText) findViewById(R.id.ssid);
@@ -51,13 +153,27 @@ public class MainActivity extends AppCompatActivity {
         } else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
             Log.d("aha", "access coarse location not granted");
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 101);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 102);
+        }else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            Log.d("aha", "access coarse location not granted");
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 103);
         }
 
         final BluetoothManager manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = manager.getAdapter();
         scanLeDevice();
     }
+
+    private MapView mapView;
+
+    public MqttAndroidClient client;
+
+    public IMqttMessageListener iMqttMessageListener;
+
+    public IMqttToken iMqttToken;
+
+    public TextToSpeech textToSpeech;
 
     private HttpURLConnection urlConnection;
 
@@ -86,6 +202,7 @@ public class MainActivity extends AppCompatActivity {
     public TextView tv;
     public EditText thessid;
     public EditText thepw;
+    private  String DS_id;
 
     final static ExecutorService tpe = Executors.newSingleThreadExecutor();
 
@@ -129,6 +246,31 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            super.onCharacteristicWrite(gatt, characteristic, status);
+
+
+            if (characteristic.getUuid().toString().equals(ssid_UUID)) {
+
+                if (character_pw != null)
+                {
+                    character_pw.setValue(thepw.getText().toString());
+                    bluetoothGatt.writeCharacteristic(character_pw);
+                }
+
+            }
+
+            if (characteristic.getUuid().toString().equals(pw_UUID)) {
+                if (character_wifistate != null)
+                {
+                    character_wifistate.setValue("open");
+                    bluetoothGatt.writeCharacteristic(character_wifistate);
+                }
+            }
+
+        }
 
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
@@ -206,7 +348,9 @@ public class MainActivity extends AppCompatActivity {
             Log.d("aha","wifistate change");
             if (characteristic.getUuid().toString().equals(wifistate_UUID)) {
                 final String thespeed = characteristic.getStringValue(0);
-                Log.d("aha", "windspeed change to: " + thespeed);
+
+                speakhello("wifi " + thespeed);
+
                 runOnUiThread(new Runnable() {
                     public void run() {
                         tv.setText("WIFI STATE: " + thespeed);
@@ -246,7 +390,9 @@ public class MainActivity extends AppCompatActivity {
             if (esp32_ble == null) {
                 esp32_ble = result.getDevice();
                 bluetoothGatt = esp32_ble.connectGatt(getApplicationContext(), true, gattCallback);
-                Log.d("aha", "esp32_ble is " + esp32_ble.getName());
+                DS_id = esp32_ble.getName();
+                Log.d("aha", "esp32_ble is " + DS_id);
+                speakhello("Find " + DS_id);
                 bluetoothGatt.connect();
 
             } else {
@@ -265,6 +411,24 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("aha", "onRequestPermissionsResult: " + "get ble adnim permission");
                 } else {
                     Log.d("aha", "onRequestPermissionsResult: " + " not get ble adnim permission");
+                }
+                return;
+            }
+
+            case 102: {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.d("aha", "onRequestPermissionsResult: " + "get ble adnim permission");
+                } else {
+                    Log.d("aha", "onRequestPermissionsResult: " + " not get ble adnim permission");
+                }
+                return;
+            }
+
+            case 103: {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.d("aha", "onRequestPermissionsResult: " + "get ACCESS_FINE_LOCATION permission");
+                } else {
+                    Log.d("aha", "onRequestPermissionsResult: " + " not ACCESS_FINE_LOCATION permission");
                 }
                 return;
             }
@@ -289,10 +453,62 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void wifiopen(View view) {
-        if (character_wifistate != null)
+
+
+        if (character_ssid != null)
         {
-            character_wifistate.setValue("open");
-            bluetoothGatt.writeCharacteristic(character_wifistate);
+            character_ssid.setValue(thessid.getText().toString());
+            bluetoothGatt.writeCharacteristic(character_ssid);
+        }
+
+    }
+
+    public void mqttpub(String s) throws MqttException {
+        MqttMessage message = new MqttMessage(s.getBytes());
+        if (client.isConnected()) {
+            client.publish("DrankStation_setwater", message);
+        }else {
+            client.connect();
+            client.publish("DrankStation_setwater", message);
         }
     }
+
+    public void speakhello(String str) {
+        Bundle bundle = new Bundle();
+        bundle.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC);
+        textToSpeech.speak(str, TextToSpeech.QUEUE_FLUSH, bundle, null);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+        }
+        super.onDestroy();
+    }
+
+    public void sendinfo(View view) {
+
+        String la = "12.234";
+        String ln = "37.435";
+        String info = "info";
+        String sendstr = "{\"DS_id\":\"" + DS_id + "\",\"la\":\"" + la + "\",\"ln\":\"" + ln + "\",\"info\":\"" + info + "\"}";
+        Log.d("aha", "sendinfo: " + sendstr);
+        /*
+        try {
+            mqttpub(sendstr);
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+        */
+
+    }
+
+
+    public void  getmapinfo()
+    {
+        //mapView.getMap().getProjection().fromScreenLocation(android.graphics.Point paramPoint)
+    }
+
 }
