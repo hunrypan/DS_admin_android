@@ -464,10 +464,10 @@ public class MainActivity extends AppCompatActivity {
     public void mqttpub(String s) throws MqttException {
         MqttMessage message = new MqttMessage(s.getBytes());
         if (client.isConnected()) {
-            client.publish("DrankStation_setwater", message);
+            client.publish("mapinfo", message);
         }else {
             client.connect();
-            client.publish("DrankStation_setwater", message);
+            client.publish("mapinfo", message);
         }
     }
 
@@ -492,13 +492,12 @@ public class MainActivity extends AppCompatActivity {
         String sendstr = "{\"DS_id\":\"" + DS_id + "\",\"la\":\"" + String.valueOf(la) + "\",\"ln\":\"" + String.valueOf(ln) + "\",\"info\":\"" + info + "\"}";
         Log.d("aha", "sendinfo: " + sendstr);
 
-        /*
+
         try {
             mqttpub(sendstr);
         } catch (MqttException e) {
             e.printStackTrace();
         }
-        */
 
     }
 
