@@ -26,6 +26,7 @@ import android.os.ParcelUuid;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -68,16 +69,17 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        et = (EditText)findViewById(R.id.info);
+
+        wifi_bt = (Button)findViewById(R.id.relink);
+        wifi_bt.setEnabled(false);
+
+        map_bt = (Button)findViewById(R.id.mapbt);
+        map_bt.setEnabled(false);
         gpstime = 0;
 
         mapView = (MapView) findViewById(R.id.map);
         mapView.onCreate(null);
-
-        startgps();
-
-        //mapView.getMap().setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，
-        //mapView.getMap().getUiSettings().setMyLocationButtonEnabled(true);
-
 
         textToSpeech = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
             @Override
@@ -94,6 +96,12 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        startgps();
+
+        //mapView.getMap().setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，
+        //mapView.getMap().getUiSettings().setMyLocationButtonEnabled(true);
+
 
         String clientId = MqttClient.generateClientId();
         client = new MqttAndroidClient(getApplication(), "tcp://94.191.14.111:2000", clientId);
@@ -119,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
         tv = (TextView) findViewById(R.id.tv);
         thepw = (EditText) findViewById(R.id.pw);
         thessid = (EditText) findViewById(R.id.ssid);
+
 
         if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BLUETOOTH_ADMIN) != PackageManager.PERMISSION_GRANTED) {
             Log.d("aha", "ble admin not granted");
@@ -183,6 +192,9 @@ public class MainActivity extends AppCompatActivity {
     public Double ln;
     private  Marker marker;
     private  int gpstime;
+    private  EditText et;
+    private Button map_bt;
+    private Button wifi_bt;
 
     final static ExecutorService tpe = Executors.newSingleThreadExecutor();
 
@@ -198,6 +210,11 @@ public class MainActivity extends AppCompatActivity {
 
             if (characteristic.getUuid().toString().equals(wifistate_UUID)) {
                 final String wifistate = characteristic.getStringValue(0);
+                if (wifistate.equals("OFF")) {
+                    Log.d("aha", "onCharacteristicRead: is off to speak");
+                    speakhello("Please trun on drink station's wifi");
+                }
+
                 bluetoothGatt.readCharacteristic(character_ssid);
                 runOnUiThread(new Runnable() {
                     public void run() {
@@ -221,6 +238,7 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     public void run() {
                         thepw.setText(pwstr);
+                        wifi_bt.setEnabled(true);
                     }
                 });
             }
@@ -470,8 +488,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void sendinfo(View view) {
 
-        EditText et = (EditText)findViewById(R.id.info);
-
         String info = et.getText().toString();
         String sendstr = "{\"DS_id\":\"" + DS_id + "\",\"la\":\"" + String.valueOf(la) + "\",\"ln\":\"" + String.valueOf(ln) + "\",\"info\":\"" + info + "\"}";
         Log.d("aha", "sendinfo: " + sendstr);
@@ -510,6 +526,14 @@ public class MainActivity extends AppCompatActivity {
                             marker = mapView.getMap().addMarker(new MarkerOptions().position(latLng).title("Drink Station").snippet(""));
                             marker.setDraggable(true);
 
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                map_bt.setEnabled(true);
+                            }
+                        });
+
+                        speakhello("Find here's location. your can edit it");
+
                             AMap.OnMarkerDragListener markerDragListener = new AMap.OnMarkerDragListener() {
 
                                 @Override
@@ -542,6 +566,7 @@ public class MainActivity extends AppCompatActivity {
         mLocationOption = new AMapLocationClientOption();
         mLocationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
         mLocationOption.setOnceLocationLatest(true);
+        //mLocationOption.setInterval(1000);
         mLocationOption.setNeedAddress(false);
         mLocationOption.setHttpTimeOut(10000);
         mLocationOption.setLocationCacheEnable(false);
